@@ -3,11 +3,11 @@
 Python Utility to create searchable pdf from series of images downloaded using specific format.
 Images must be provided in a specified format containing base-url, subject name and chapters prefix.
 """
-import os
-import requests
-import pytesseract
 import argparse
+import os
 from concurrent.futures import ThreadPoolExecutor
+import pytesseract
+import requests
 from PIL import Image
 
 
@@ -26,7 +26,7 @@ def download_chapters(url: str, subject: str, chapter_prefix: str) -> None:
         chapter = chapter_prefix + f'{i}'
         print('Downloading Chapter ' + chapter)
         result = download_chapter(url+chapter+'/', subject, chapter)
-        if result is True:
+        if result == True:
             print('Finished Downloading Chapter '+ chapter)
 
 def download_chapter(url: str, subject: str, chapter: str) -> bool:
@@ -54,7 +54,7 @@ def download_img_helper(params: tuple) -> bool:
 def download_image(url: str, image: str, subject: str, chapter: str) -> bool:
     """Downloads image using url, subject, chapter and image names."""
     try:
-        resp = requests.get(url, stream = True)
+        resp = requests.get(url, timeout=2, stream=True)
         if resp.status_code == 200:
             img = Image.open(resp.raw)
             path = os.path.join(subject, chapter)
@@ -76,7 +76,7 @@ def download_image(url: str, image: str, subject: str, chapter: str) -> bool:
 
 def generate_pdf(subject: str) -> None:
     """Generate searchable pdf using teserract from sorted images."""
-    with open(subject+'-pages.txt') as in_file:
+    with open(subject+'-pages.txt', encoding='utf-8') as in_file:
         with open(subject+'-sorted-pages.txt', mode='w', encoding='utf-8') as out_file:
             out_file.write('\n'.join(sorted(in_file.read().splitlines())))
     print('Generating pdf output..')
