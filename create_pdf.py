@@ -1,11 +1,14 @@
-#!/usr/bin/python3
-from io import StringIO
-from PIL import Image
-from concurrent.futures import ThreadPoolExecutor
+#!/usr/bin/env python
+"""
+Python Utility to create searchable pdf from series of images downloaded using specific format.
+Images must be provided in a specified format containing base-url, subject name and chapters prefix.
+"""
 import os
 import requests
 import pytesseract
 import argparse
+from concurrent.futures import ThreadPoolExecutor
+from PIL import Image
 
 
 def create_pdf(base_url: str, subject: str, chapter_prefix: str) -> None:
@@ -17,7 +20,8 @@ def create_pdf(base_url: str, subject: str, chapter_prefix: str) -> None:
     download_chapters(base_url+subject+'/', subject, chapter_prefix)
     generate_pdf(subject)
 
-def download_chapters(url, subject, chapter_prefix):
+def download_chapters(url: str, subject: str, chapter_prefix: str) -> None:
+    """Downloads Images from Chapters using the url, subject and chapter prefix."""
     for i in range(1,20):
         chapter = chapter_prefix + f'{i}'
         print('Downloading Chapter ' + chapter)
@@ -25,11 +29,13 @@ def download_chapters(url, subject, chapter_prefix):
         if result is True:
             print('Finished Downloading Chapter '+ chapter)
 
-def download_chapter(url, subject, chapter):
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        for i in range(1,1000, 8):
+def download_chapter(url: str, subject: str, chapter: str) -> bool:
+    """Downloads Images from Chapter using the url, subject and chapter name."""
+    n_cores = min(32, os.cpu_count() or 4 + 4)
+    with ThreadPoolExecutor(max_workers=n_cores) as executor:
+        for i in range(1,1000, n_cores):
             params=[]
-            for j in range(i, i-8, -1):
+            for j in range(i, i-n_cores, -1):
                 if j > 0:
                     image = f'{j:>03}'+'.jpg'
                     params.append((url+image, image, subject, chapter))
@@ -38,11 +44,15 @@ def download_chapter(url, subject, chapter):
             if False in results:
                 return True
 
+    return False
 
-def download_img_helper(params):
+
+def download_img_helper(params: tuple) -> bool:
+    """Helper Function to download image using tuple as input."""
     return download_image(params[0], params[1], params[2], params[3])
 
-def download_image(url, image, subject, chapter):
+def download_image(url: str, image: str, subject: str, chapter: str) -> bool:
+    """Downloads image using url, subject, chapter and image names."""
     try:
         resp = requests.get(url, stream = True)
         if resp.status_code == 200:
@@ -53,7 +63,7 @@ def download_image(url, image, subject, chapter):
             path = os.path.join(path, image)
             img.save(path)
             print('Downloaded Image '+image)
-            with open(subject+'-pages.txt', 'a') as file:
+            with open(subject+'-pages.txt', mode='a', encoding='utf-8') as file:
                 file.write(path)
                 file.write('\n')
             return True
@@ -64,15 +74,16 @@ def download_image(url, image, subject, chapter):
         print('Failed Downloading Image '+image, err)
         return False
 
-def generate_pdf(subject):
-    with open(subject+'-pages.txt') as input:
-        with open(subject+'-sorted-pages.txt', 'w') as output:
-            output.write('\n'.join(sorted(input.read().splitlines())))
+def generate_pdf(subject: str) -> None:
+    """Generate searchable pdf using teserract from sorted images."""
+    with open(subject+'-pages.txt') as in_file:
+        with open(subject+'-sorted-pages.txt', mode='w', encoding='utf-8') as out_file:
+            out_file.write('\n'.join(sorted(in_file.read().splitlines())))
     print('Generating pdf output..')
     pdf = pytesseract.image_to_pdf_or_hocr(subject+'-sorted-pages.txt', extension='pdf')
-    with open(subject+'.pdf', 'w+b') as file:
-        file.write(pdf)
-        file.close()
+    with open(subject+'.pdf', mode='w+b', encoding='utf-8') as out_file:
+        out_file.write(pdf)
+        out_file.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
