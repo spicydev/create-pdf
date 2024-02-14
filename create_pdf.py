@@ -12,7 +12,7 @@ from PIL import Image
 
 
 def create_pdf(base_url: str, subject: str, chapter_prefix: str) -> None:
-    """Creates a new searchable pdf by downloading images.
+    """ Creates a new searchable pdf by downloading images.
         Ex: base_url = https://www.example.com/, subject: SUB, chapter_prefix: A
         so final url for downloading images is - https://www.example.com/SUB/A1/001.jpg.
         Supports Total 19 chapters like A1 to A19 and pages from 1 to 999.
@@ -26,7 +26,7 @@ def download_chapters(url: str, subject: str, chapter_prefix: str) -> None:
         chapter = chapter_prefix + f'{i}'
         print('Downloading Chapter ' + chapter)
         result = download_chapter(url+chapter+'/', subject, chapter)
-        if result == True:
+        if result is True:
             print('Finished Downloading Chapter '+ chapter)
 
 def download_chapter(url: str, subject: str, chapter: str) -> bool:
@@ -37,7 +37,7 @@ def download_chapter(url: str, subject: str, chapter: str) -> bool:
             params=[]
             for j in range(i, i-n_cores, -1):
                 if j > 0:
-                    image = f'{j:>03}'+'.jpg'
+                    image = f'{j:>04}'+'.jpg'
                     params.append((url+image, image, subject, chapter))
             results = list(executor.map(download_img_helper, params))
             params=[]
@@ -92,11 +92,11 @@ if __name__ == "__main__":
     )
     subparsers = parser.add_subparsers(dest="command")
     create_parser = subparsers.add_parser("create", help=create_pdf.__doc__)
-    create_parser.add_argument("base_url")
-    create_parser.add_argument("subject")
-    create_parser.add_argument("chapter_prefix")
+    create_parser.add_argument("base_url", help="Base url of the website")
+    create_parser.add_argument("subject", help="Subject name")
+    create_parser.add_argument("chapter_prefix", help="Chapter prefix")
 
-    args = create_parser.parse_args()
+    args = parser.parse_args()
 
     if args.command == "create":
         create_pdf(args.base_url, args.subject, args.chapter_prefix)
